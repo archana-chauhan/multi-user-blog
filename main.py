@@ -16,7 +16,7 @@ template_dir = os.path.join(os.path.dirname(__file__), 'templates')
 jinja_env = jinja2.Environment(loader=jinja2.FileSystemLoader(template_dir),
                                autoescape=True)
 
-secret = 'du.uyX9fE~Tb6.pp&U3D-OsmYO,Gqi$^jS34tzu9'
+SECRET = 'du.uyX9fE~Tb6.pp&U3D-OsmYO,Gqi$^jS34tzu9'
 
 # Regular expression to validate username
 RE_USER = re.compile(r"^[a-zA-Z0-9_-]{3,20}$")
@@ -53,6 +53,48 @@ def valid_email(emailaddress):
     return not email and RE_EMAIL.match(emailaddress)
 
 
+def make_secure_val(val):
+    '''
+        make_secure_val : function return hashed value of val
+    '''
+    return '%s|%s' % (val, hmac.new(SECRET, val).hexdigest())
+
+
+def check_secure_val(secure_val):
+    '''
+        check_secure_val : function check if the cookie is secure or not,
+        if cookie is secured it return the val
+    '''
+    val = secure_val.split('|')[0]
+    if make_secure_val(val) == secure_val:
+        return val
+
+
+def make_salt(len=5):
+    '''
+        make_salt : function make salt for password hash
+    '''
+    return ''.join(random.choice(string.ascii_letters) for x in xrange(len))
+
+
+def make_pwd_hash(username, password, salt=None):
+    '''
+        make_pwd_hash : function return hashed value for password
+    '''
+    if not salt:
+        salt = make_salt()
+    h = hashlib.sha256(username + password + salt).hexdigest()
+    return '%s|%s' % (h, salt)
+
+
+def valid_pwd(username, password, h):
+    '''
+        valid_pwd : function verifies hashed value of password
+    '''
+    salt = h.split('|')[1]
+    return h == make_pwd_hash(username, password, salt)
+
+
 class MainHandler(webapp2.RequestHandler):
     '''
         This handler class contains generic functions that are inherited by
@@ -67,6 +109,15 @@ class MainHandler(webapp2.RequestHandler):
 
     def render(self, template, **kw):
         self.write(self.render_str(template, **kw))
+
+    def set_cookie(self, name, val):
+        cookie_val = make_secure_val(val)
+        self.response.headers.add_header('Set-Cookie', '%s=%s; Path=/' %
+                                         (name, cookie_val))
+
+    def get_cookie(self, name):
+        cookie_val = self.request.cookies.get(name)
+        return cookie_val and check_secure_val(cookie_val)
 
 
 class User(db.Model):
@@ -84,18 +135,23 @@ class User(db.Model):
     email = db.StringProperty(required=True)
 
     @classmethod
-    def user_byid(cls, user_id):
+    def get_user_by_id(cls, user_id):
         return User.get_by_id(user_id)
 
     @classmethod
-    def user_byname(cls, username):
+    def get_user_by_name(cls, username):
         return db.GqlQuery("SELECT * FROM User WHERE username= :username", username=username).get()     # NOQA
 
     @classmethod
     def user_register(cls, username, password, email):
-        return USer(username=username, password=password, email=email)
+        password_hash = make_pwd_hash(password)
+        return User(username=username, password=password_hash, email=email)
 
-
+    @classmethod
+    def user_login(cls, username, password):
+        user = cls.get_user_by_name(username)
+        hashed_password = user.password
+        return valid_pwd(username, password, hashed_password) 
 
 
 class MainPage(webapp2.RequestHandler):
