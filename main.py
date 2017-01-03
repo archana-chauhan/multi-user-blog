@@ -110,13 +110,13 @@ class MainHandler(webapp2.RequestHandler):
     def render(self, template, **kw):
         self.write(self.render_str(template, **kw))
 
-    def set_cookie(self, name, val):
+    def set_cookie(self, user, val):
         cookie_val = make_secure_val(val)
         self.response.headers.add_header('Set-Cookie', '%s=%s; Path=/' %
-                                         (name, cookie_val))
+                                         (user, cookie_val))
 
-    def get_cookie(self, name):
-        cookie_val = self.request.cookies.get(name)
+    def get_cookie(self, user):
+        cookie_val = self.request.cookies.get(user)
         return cookie_val and check_secure_val(cookie_val)
 
 
@@ -269,6 +269,7 @@ class NewPostHandler(MainHandler):
             post = Post(subject=self.subject, content=self.content,
                         created_by_user=self.username)
             post.put()
+            # Redirect to the newly created post page
             self.redirect('/%s' % str(b.key().id()))
         else:
             self.error = "All fields are required !!"
@@ -276,8 +277,85 @@ class NewPostHandler(MainHandler):
                              content=self.content, error=self.error)
 
 
+class PostPageHandler(MainHandler):
+    def get(self, post_id):
+        key = db.Key.from_path('Post', int(post_id))
+        self.post = db.get(key)
+        if not self.post:
+            self.error(404)
+            return
+        self.render("permalink.html", post=self.post, user=self.user)
 
 
+class SignUpPageHandler(MainHandler):
+    def render_sign_up_page(self, name="", username="", password="", verify="",
+                            email="", error=""):
+        self.render("signup.html", name=name, username=username,
+                    password=password, verify=verify, email=email, error=error)
+
+    def get(self):
+        self.render_sign_up_page()
+
+    def post(self):
+        self.name = self.request.get('name')
+        self.username = self.request.get('username')
+        self.password = self.request.get('password')
+        self.verify = self.request.get('verify')
+        self.email = self.request.get('email')
+        # Checks for name first
+        if not self.name:
+            self.error = "Please enter name !!"
+            self.render_sign_up_page(name=self.name,
+                                     username=self.username,
+                                     email=self.email, error=self.error)
+
+        if self.username and self.password and self.verify and self.email:
+            if not valid_username(self.username):
+                self.error = "Not a valid username, please enter a valid"
+                " username !!"
+                self.render_sign_up_page(name=self.name,
+                                         username=self.username,
+                                         email=self.email, error=self.error)
+            elif not valid_password(self.password):
+                self.error = "Not a valid password, please enter a valid "
+                "password !!"
+                self.render_sign_up_page(name=self.name,
+                                         username=self.username,
+                                         email=self.email, error=self.error)
+            elif self.password != self.verify:
+                self.error = "Passwords do not match !!"
+                self.render_sign_up_page(aame=self.name,
+                                         username=self.username,
+                                         email=self.email, error=self.error)
+            elif not valid_email(self.email):
+                self.error = "Email not valid !!"
+                self.render_sign_up_page(name=self.name,
+                                         username=self.username,
+                                         email=self.email, error=self.error)
+            else:
+                # Checking if username already exists or not
+                user = User.get_user_by_name(self.username)
+                if user:
+                    self.error = "Username already exists !! Please try "
+                    "another"
+                    self.render_sign_up_page(name=self.name,
+                                             username=self.username,
+                                             email=self.email,
+                                             error=self.error)
+                # If user doesn't exists already we put it in datastore
+                else:
+                    self.password_hash = make_pwd_hash(self.username,
+                                                       self.password)
+                    user = User.user_register(self.name, self.password_hash,
+                                              self.password, self.email)
+                    user.put()
+                    self.set_cookie('user_id', str(user.key().id()))
+                    self.redirect('/home')
+        # If all fields are not filled this block will execute
+        else:
+            self.error = "All fields are required !!"
+            self.render_sign_up_page(name=self.name, username=self.username,
+                                     email=self.email, error=self.error)
 
 app = webapp2.WSGIApplication([
       ('/', MainPage),
