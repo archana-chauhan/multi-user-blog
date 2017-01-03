@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="row">
+  <div class="col-md-12">
+    <div class="panel panel-info">
+      <div class="panel-heading">
+        <h1>{{ post.subject }}</h1>
+      </div>
+      <div class="panel-body">
+        <p>{{ post.content }}</p>
+      </div>
+      <div class="panel-footer">
+        <a href="/like/{{ post.key().id() }}">
+          <span class="glyphicon glyphicon-thumbs-up" aria-hidden="true"></span>
+          &nbsp;{% if post.total_likes == None or post.total_likes == 0 %} 0
+          {% else %} post.total_likes{% endif %} <span>likes<span>
+        </a>
+
+        &nbsp;&nbsp;&nbsp;&nbsp;
+
+        <a href="#comments">
+          <span class="glyphicon glyphicon-comment" aria-hidder="true"></span>
+          &nbsp; comment
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="row">
+  <div class="col-sm-8">
+    <form action="/comment/{{ post.key().id() }}" method="post">
+    <div class="panel panel-default">
+      <div class="panel-body">
+        <textarea class="form-control" style="height:100px;" name="comment"></textarea>
+      </div>
+      <div class="panel-footer text-right">
+        <button type="submit" class="btn btn-primary">Post Comment</button>
+      </div>
+    </div>
+    </form>
+  </div>
+</div>
+<br>
+<div class="row">
+  <div class="col-md-12" id="comments">
+    <h3>Comments</h3>
+    <hr>
+  </div>
+</div>
+
+{% for comment in comments %}
+<div class="row">
+  <div class="col-md-12">
+    <div class="panel panel-success">
+      <div class="panel-heading">
+        <p>
+          <span class="text-left">USER : {{ comment.comment_by_user }}</span>
+          <span class="text-right">Posted time : {{ comment.created_date_time.strftime("%b %d, %Y") }}
+        </p>
+      </div>
+      <div class="panel-body">
+        <p>{{ comment.comment }}</p>
+      </div>
+      {% if user %}
+        {%  if comment.created_by_user == user.username %}
+          <div class="panel-footer text-right">
+            <a class="btn btn-warning" href="/editcomment/{{ comment.key().id() }}">Edit</a>
+            &nbsp;&nbsp;
+            <a class="btn btn-danger" href="/deletecomment/{{ comment.key().id() }}">Delete</a>
+          </div>
+        {% endif %}
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endfor %}
+
+{% endblock %}

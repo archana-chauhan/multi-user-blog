@@ -1,23 +1,5 @@
 {% extends "base.html" %}
 {% block content %}
-
-{% if error != "" %}
-  <div class="row">
-    <div class="col-md-12">
-      <div class="alert alert-danger" role="alert">
-        {{ error }}
-      </div>
-    </div>
-  </div>
-{% endif %}
-
-<div class="row">
-  <div class="col-md-12">
-    <a href="/newpost" class="btn btn-success">New Post</a>
-    {{ user.password }}
-  </div>
-</div>
-<br>
 {% if posts %}
   {% for post in posts %}
   <div class="row">
@@ -54,12 +36,10 @@
                 <a class="btn btn-danger" href="/deletepost/{{ post.key().id() }}">Delete</a>
               {% endif %}
             {% endif  %}
-
         </div>
       </div>
     </div>
   </div>
   {% endfor %}
 {% endif %}
-
 {% endblock %}

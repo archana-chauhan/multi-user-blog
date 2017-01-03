@@ -16,8 +16,8 @@ template_dir = os.path.join(os.path.dirname(__file__), 'templates')
 jinja_env = jinja2.Environment(loader=jinja2.FileSystemLoader(template_dir),
                                autoescape=True)
 
-SECRET = 'du.uyX9fE~Tb6.pp&U3D-OsmYO,Gqi$^jS34tzu9'
-
+#SECRET = 'du.uyX9fE~Tb6.pp&U3D-OsmYO,Gqi$^jS34tzu9'
+SECRET = 'gfdgf78h97.jk,shfsgsgeieu..t45d.gd.g'
 # Regular expression to validate username
 RE_USER = re.compile(r"^[a-zA-Z0-9_-]{3,20}$")
 
@@ -50,7 +50,12 @@ def valid_email(emailaddress):
         valid_email : function math the email with the regular expression.
         If matches return true else return false
     '''
-    return not email and RE_EMAIL.match(emailaddress)
+    return emailaddress and RE_EMAIL.match(emailaddress)
+
+
+def render_str(template, **params):
+    t = jinja_env.get_template(template)
+    return t.render(params)
 
 
 def make_secure_val(val):
@@ -83,46 +88,16 @@ def make_pwd_hash(username, password, salt=None):
     '''
     if not salt:
         salt = make_salt()
-    h = hashlib.sha256(username + password + salt).hexdigest()
-    return '%s|%s' % (h, salt)
+    hashed_password = hashlib.sha256(username + password + salt).hexdigest()
+    return '%s|%s' % (salt, hashed_password)
 
 
-def valid_pwd(username, password, h):
+def valid_pwd(username, password, hashed_password):
     '''
         valid_pwd : function verifies hashed value of password
     '''
-    salt = h.split('|')[1]
-    return h == make_pwd_hash(username, password, salt)
-
-
-class MainHandler(webapp2.RequestHandler):
-    '''
-        This handler class contains generic functions that are inherited by
-        other child handler classes
-    '''
-    def write(self, *a, **kw):
-        self.response.out.write(*a, **kw)
-
-    def render_str(self, template, **params):
-        t = jinja_env.get_template(template)
-        return t.render(params)
-
-    def render(self, template, **kw):
-        self.write(self.render_str(template, **kw))
-
-    def set_cookie(self, user, val):
-        cookie_val = make_secure_val(val)
-        self.response.headers.add_header('Set-Cookie', '%s=%s; Path=/' %
-                                         (user, cookie_val))
-
-    def get_cookie(self, user):
-        cookie_val = self.request.cookies.get(user)
-        return cookie_val and check_secure_val(cookie_val)
-
-    def initialize(self, *a, **kw):
-        webapp2.RequestHandler.initialize(self, *a, **kw)
-        user_id = self.read_cookie('user_id')
-        self.user = user_id and User.get_user_by_id(int(user_id))
+    salt = hashed_password.split('|')[0]
+    return hashed_password == make_pwd_hash(username, password, salt)
 
 
 # User model
@@ -139,7 +114,7 @@ class User(db.Model):
     '''
     name = db.StringProperty(required=True)
     username = db.StringProperty(required=True)
-    password = db.StringProperty(required=True)
+    password = db.TextProperty(required=True)
     email = db.StringProperty(required=True)
 
     @classmethod
@@ -162,8 +137,8 @@ class User(db.Model):
             user_register : function creates hash of password then create data
             entity of User(model) class
         '''
-        password_hash = make_pwd_hash(username, password)
-        return User(name=name, username=username, password=password_hash,
+        # password_hash = make_pwd_hash(username, password)
+        return User(name=name, username=username, password=password,
                     email=email)
 
     @classmethod
@@ -175,12 +150,13 @@ class User(db.Model):
             login. If it matches it returns true else return false
         '''
         user = cls.get_user_by_username(username)
-        hashed_password = user.password
-        return valid_pwd(username, password, hashed_password)
+        # hashed_password = user.password
+        #return valid_pwd(username, password, hashed_password)
+        return password == user.password
 
 
 # Post model
-class Post(db.model):
+class Post(db.Model):
     '''
         Post : This is Google Datastore kind that stores information
         about posts posted by user.
@@ -203,9 +179,13 @@ class Post(db.model):
     content = db.StringProperty(required=True)
     created_date_time = db.DateTimeProperty(auto_now_add=True)
     last_modified = db.DateTimeProperty(auto_now=True)
-    created_by_user = db.StringProperty(required=False)
+    created_by_user = db.StringProperty(required=False) #store username of user
     total_likes = db.IntegerProperty(required=False)
     liked_by_users = db.ListProperty(str)
+
+    # def render(self):
+    #     self._render_text = self.content.replace('\n', '<br>')
+    #     return render_str("post.html", post=self)
 
     @classmethod
     def get_post_by_username(cls, username):
@@ -241,20 +221,51 @@ class Comment(db.Model):
         return comments
 
 
-class MainPage(MainHandler):
+class Handler(webapp2.RequestHandler):
+    '''
+        This handler class contains generic functions that are inherited by
+        other child handler classes
+    '''
+    def write(self, *a, **kw):
+        self.response.out.write(*a, **kw)
+
+    def render_str(self, template, **params):
+        return render_str(template, **params)
+
+    def render(self, template, **kw):
+        self.write(self.render_str(template, **kw))
+
+    def set_cookie(self, user, val):
+        cookie_val = make_secure_val(val)
+        self.response.headers.add_header('Set-Cookie', '%s=%s; Path=/' %
+                                         (user, cookie_val))
+
+    def get_cookie(self, user):
+        cookie_val = self.request.cookies.get(user)
+        return cookie_val and check_secure_val(cookie_val)
+
+    def initialize(self, *a, **kw):
+        webapp2.RequestHandler.initialize(self, *a, **kw)
+        user_id = self.get_cookie('user_id')
+        self.user = user_id and User.get_user_by_id(int(user_id))
+
+
+class MainPageHandler(Handler):
     '''
         This handler handles the main page of the blog post
     '''
-    def render_homepage(self, username):
-        self.display_posts = db.GqlQuery("SELECT * FROM Post ORDER BY created_date_time DESC")  # NOQA
-        self.render("mainpage.html", display_posts=self.display_posts,
-                    username=username)
+    def render_main_page(self, user=None):
+        self.all_posts = db.GqlQuery("SELECT * FROM Post ORDER BY created_date_time DESC")  # NOQA
+        self.render("mainpage.html", posts=self.all_posts, user=user)
 
     def get(self):
-        self.render_homepage(user=self.user)
+        if self.user:
+            self.render_main_page(user=self.user)
+        else:
+            self.render_main_page()
 
 
-class NewPostHandler(MainHandler):
+class NewPostHandler(Handler):
     def render_page(self, subject="", content="", error=""):
         self.render("newpost.html", subject=subject, content=content,
                     error=error)
@@ -264,7 +275,7 @@ class NewPostHandler(MainHandler):
         if self.user:
             self.render_page()
         else:
-            self.redirect('/')
+            self.redirect('/login')
 
     def post(self):
         if self.user:
@@ -276,7 +287,7 @@ class NewPostHandler(MainHandler):
                             created_by_user=self.username)
                 post.put()
                 # Redirect to the newly created post page
-                self.redirect('/%s' % str(post.key().id()))
+                self.redirect('/post/%s' % str(post.key().id()))
             else:
                 self.error = "All fields are required !!"
                 self.render_page(subject=self.subject, content=self.content,
@@ -285,133 +296,143 @@ class NewPostHandler(MainHandler):
             self.redirect('/login')
 
 
-class PostPageHandler(MainHandler):
+
+class PostPageHandler(Handler):
     def get(self, post_id):
         key = db.Key.from_path('Post', int(post_id))
         self.post = db.get(key)
         if not self.post:
             self.error(404)
             return
-        self.render("permalink.html", post=self.post, user=self.user)
+        comments = Comment.get_comments(post_id)
+        self.render("post.html", post=self.post, user=self.user,
+                    comments=comments)
 
 
-class EditPostHandler(MainHandler):
-    def get(self, post_id):
-        key = db.Key.from_path('Post', int(post_id))
-        self.post = db.get(key)
-        if self.user:
-            if self.post:
-                if self.post.created_by_user = self.user.username:
-                    self.render("editpost.html", post_id=post_id,
-                                subject=self.post.subject,
-                                content=self.post.content)
-                else:
-                    self.redirect('/')
-            else:
-                self.redirect('/')
-        else:
-            self.redirect('/login')
-
-    def post(self, post_id):
-        if self.user:
-            self.subject = self.request.get('subject')
-            self.content = self.request.get('content')
-            key = db.Key.from_path('Path', int(post_id))
-            self.post = db.get(key)
-            if self.subject and self.content:
-                self.post.subject = self.subject
-                self.post.content = self.content
-                self.post.put()
-                self.redirect('/%s' % post_id)
-            else:
-                self.error = "All fields are required !!"
-                self.render("editpost.html", post_id=post_id,
-                            subject=self.subject, content=self.content)
-
-
-class DeletePostHandler(MainHandler):
-    def get(self, post_id):
-        if self.user:
-            key = db.Key.from_path('Post', int(post_id))
-            self.post = db.get(key)
-            if self.post:
-                if self.post.created_by_user == self.user.username:
-                    self.render("deletepost.html")
-                else:
-                    self.redirect("/home")
-            else:
-                self.redirect("/home")
-        else:
-            self.redirect("/login")
-
-    def post(self, post_id):
-        if self.user:
-            key = db.Key.from_path('Post', int(post_id))
-            self.post = db.get(key)
-            if self.post:
-                if self.post.created_by_user == self.user.username:
-                    db.delete(key)
-                    self.redirect("/home")
-                else:
-                    self.redirect("/home")
-            else:
-                self.redirect("/home")
-        else:
-            self.redirect("/login")
+class EditPostHandler(Handler):
+    # def get(self, post_id):
+    #     key = db.Key.from_path('Post', int(post_id))
+    #     self.post = db.get(key)
+    #     if self.user:
+    #         if self.post:
+    #             if self.post.created_by_user == self.user.username:
+    #                 self.render("editpost.html", post_id=post_id,
+    #                             subject=self.post.subject,
+    #                             content=self.post.content)
+    #             else:
+    #                 self.redirect('/')
+    #         else:
+    #             self.redirect('/')
+    #     else:
+    #         self.redirect('/login')
+    #
+    # def post(self, post_id):
+    #     if self.user:
+    #         self.subject = self.request.get('subject')
+    #         self.content = self.request.get('content')
+    #         key = db.Key.from_path('Path', int(post_id))
+    #         self.post = db.get(key)
+    #         if self.subject and self.content:
+    #             self.post.subject = self.subject
+    #             self.post.content = self.content
+    #             self.post.put()
+    #             self.redirect('/%s' % post_id)
+    #         else:
+    #             self.error = "All fields are required !!"
+    #             self.render("editpost.html", post_id=post_id,
+    #                         subject=self.subject, content=self.content)
+    pass
 
 
-class LikePostHandler(MainHandler):
-    def get(self, post_id):
-        if self.user:
-            key = db.Key.from_path('Post', int(post_id))
-            self.post = db.get(key)
-            if self.post.created_by_user == self.user.username:
-                self.redirect('/home')
-            else:
-                if self.post.total_likes == None:
-                    self.post.total_likes = 0
-                if self.user.username not in self.post.liked_by_users:
-                    self.post.total_likes += 1
-                    self.post.liked_by_users.append(self.user.username)
-                    self.post.put()
-                    self.redirect('/home')
+class DeletePostHandler(Handler):
+    # def get(self, post_id):
+    #     if self.user:
+    #         key = db.Key.from_path('Post', int(post_id))
+    #         self.post = db.get(key)
+    #         if self.post:
+    #             if self.post.created_by_user == self.user.username:
+    #                 self.render("deletepost.html")
+    #             else:
+    #                 self.redirect("/home")
+    #         else:
+    #             self.redirect("/home")
+    #     else:
+    #         self.redirect("/login")
+    #
+    # def post(self, post_id):
+    #     if self.user:
+    #         key = db.Key.from_path('Post', int(post_id))
+    #         self.post = db.get(key)
+    #         if self.post:
+    #             if self.post.created_by_user == self.user.username:
+    #                 db.delete(key)
+    #                 self.redirect("/home")
+    #             else:
+    #                 self.redirect("/home")
+    #         else:
+    #             self.redirect("/home")
+    #     else:
+    #         self.redirect("/login")
+    pass
 
-class CommentPostHandler(MainHandler):
-    def get(self, post_id):
-        key = db.Key.from_path('Post', int(post_id))
-        self.post = db.get(key)
-        self.comments = Comment.get_comments(int(post_id))
-        self.render("permalink.html", post=self.post,
-                        comments=self.comments, user=self.user)
+class LikePostHandler(Handler):
+    # def get(self, post_id):
+    #     if self.user:
+    #         key = db.Key.from_path('Post', int(post_id))
+    #         self.post = db.get(key)
+    #         if self.post.created_by_user == self.user.username:
+    #             self.redirect('/home')
+    #         else:
+    #             if self.post.total_likes == None:
+    #                 self.post.total_likes = 0
+    #             if self.user.username not in self.post.liked_by_users:
+    #                 self.post.total_likes += 1
+    #                 self.post.liked_by_users.append(self.user.username)
+    #                 self.post.put()
+    #                 self.redirect('/home')
+    pass
 
-    def post(self, post_id):
-        key = db.Key.from_path('Post', int(post_id))
-        self.post = db.get(key)
-        if self.user:
-            self.comment == self.request.get('comment')
-            if self.comment:
-                c = Comment(comment=self.comment,
-                            comment_by_user=self.user.username,
-                            post_id=int(post_id))
-                c.put()
-                self.comments = Comment.get_comments(int(post_id))
-                self.render("permalink.html", post=self.post,
-                            comments=self.comments, user=self.user)
-            else:
-                self.redirect('/home')
-        else:
-            self.redirect('/login')
+class CommentPostHandler(Handler):
+    # def get(self, post_id):
+    #     key = db.Key.from_path('Post', int(post_id))
+    #     self.post = db.get(key)
+    #     self.comments = Comment.get_comments(int(post_id))
+    #     self.render("permalink.html", post=self.post,
+    #                     comments=self.comments, user=self.user)
+    #
+    # def post(self, post_id):
+    #     key = db.Key.from_path('Post', int(post_id))
+    #     self.post = db.get(key)
+    #     if self.user:
+    #         self.comment == self.request.get('comment')
+    #         if self.comment:
+    #             c = Comment(comment=self.comment,
+    #                         comment_by_user=self.user.username,
+    #                         post_id=int(post_id))
+    #             c.put()
+    #             self.comments = Comment.get_comments(int(post_id))
+    #             self.render("permalink.html", post=self.post,
+    #                         comments=self.comments, user=self.user)
+    #         else:
+    #             self.redirect('/home')
+    #     else:
+    #         self.redirect('/login')
+    pass
 
 
-class CommentEditHandler(MainHandler):
-    def get(self, comment_id, post_id):
-        commentKey = db.Key.from_path('Comment', int(comment_id))
-        self.comment = db.get(commentKey)
-        if self.comment.comment_by_user == self.user.username:
+class CommentEditHandler(Handler):
+    # def get(self, comment_id, post_id):
+    #     commentKey = db.Key.from_path('Comment', int(comment_id))
+    #     self.comment = db.get(commentKey)
+    #     if self.comment.comment_by_user == self.user.username:
+    #         self.render('editcomment.html', comment=self.comment,
+    #                     user=self.user)
+    #     else:
+    #         self.render()
+    pass
 
 
-
-class SignUpPageHandler(MainHandler):
+class SignUpPageHandler(Handler):
     def render_sign_up_page(self, name="", username="", password="", verify="",
                             email="", error=""):
         self.render("signup.html", name=name, username=username,
@@ -432,6 +453,7 @@ class SignUpPageHandler(MainHandler):
             self.render_sign_up_page(name=self.name,
                                      username=self.username,
                                      email=self.email, error=self.error)
+            return
 
         if self.username and self.password and self.verify and self.email:
             if not valid_username(self.username):
@@ -468,10 +490,12 @@ class SignUpPageHandler(MainHandler):
                                              error=self.error)
                 # If user doesn't exists already we put it in datastore
                 else:
-                    self.password_hash = make_pwd_hash(self.username,
-                                                       self.password)
-                    user = User.user_register(self.name, self.username,
-                                              self.password_hash, self.email)
+                    #password_hash = make_pwd_hash(self.username,
+                                                  #self.password)
+                    user = User.user_register(name=self.name,
+                                              username=self.username,
+                                              password=self.password,
+                                              email=self.email)
                     user.put()
                     self.set_cookie('user_id', str(user.key().id()))
                     self.redirect('/home')
@@ -482,13 +506,15 @@ class SignUpPageHandler(MainHandler):
                                      email=self.email, error=self.error)
 
 
-class LoginPageHandler(MainHandler):
+class LoginPageHandler(Handler):
     def render_login_page(self, username="", password="", error=""):
-        self.render("login.html", username=username, password=password,
-                    error=error)
+        self.render("login.html", username=username, error=error)
 
     def get(self):
-        self.render_login_page()
+        if self.user:
+            self.redirect('/home')
+        else:
+            self.render_login_page()
 
     def post(self):
         self.username = self.request.get('username')
@@ -501,9 +527,9 @@ class LoginPageHandler(MainHandler):
                 self.render_login_page(username=self.username,
                                        error=self.error)
             else:
-                self.valid_pwd = User.user_login(username=self.username,
+                valid_pwds = User.user_login(username=self.username,
                                                  password=self.password)
-                if self.valid_pwd:
+                if valid_pwds:
                     self.set_cookie('user_id',
                                     str(self.user_exists.key().id()))
                     self.redirect('/home')
@@ -516,23 +542,40 @@ class LoginPageHandler(MainHandler):
             self.render_login_page(username=self.username, error=self.error)
 
 
-class HomeHandler(MainHandler):
+class HomePageHandler(Handler):
+    def render_home_page(self, user=None, posts=None, error=""):
+        self.render("home.html", user=user, posts=posts, error=error)
+
     def get(self):
         if self.user:
-            self.posts = Post.get_post_by_username(self.user.username)
-            self.render('home.html', user=self.user, posts=self.posts)
+            self.user_posts = Post.get_post_by_username(self.user.username)
+            if self.user_posts:
+                self.render_home_page(user=self.user,
+                                     posts=self.user_posts, error="")
+            else:
+                self.render_home_page(user=self.user,
+                                      posts=self.user_posts,
+                                      error="No post found !!")
         else:
             self.redirect('/login')
 
 
-class LogoutHandler(MainHandler):
+class LogoutHandler(Handler):
     def get(self):
-        self.reponse.headers.add_header('Set-Cookie', 'user_id=; Path=/')
+        self.response.headers.add_header('Set-Cookie', 'user_id=; Path=/')
         self.redirect('/')
 
+
 app = webapp2.WSGIApplication([
-      ('/', MainPage),
-      ('/login', HandlerLogin),
-      ('/logout', HandlerLogout),
-      ('/signup', HandlerSignUp)
+      ('/', MainPageHandler),
+      ('/signup', SignUpPageHandler),
+      ('/login', LoginPageHandler),
+      ('/logout', LogoutHandler),
+      ('/home', HomePageHandler),
+      ('/newpost', NewPostHandler),
+      ('/post/([0-9]+)', PostPageHandler),
+      ('/editpost/([0-9]+)', EditPostHandler),
+      ('/deletepost/([0-9]+)', DeletePostHandler),
+      ('/like/([0-9]+)', LikePostHandler),
+      ('/comment/([0-9]+)', CommentPostHandler)
       ], debug=True)
