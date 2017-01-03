@@ -157,7 +157,7 @@ class User(db.Model):
             user_register : function creates hash of password then create data
             entity of User(model) class
         '''
-        password_hash = make_pwd_hash(password)
+        password_hash = make_pwd_hash(username, password)
         return User(name=name, username=username, password=password_hash,
                     email=email)
 
@@ -356,6 +356,40 @@ class SignUpPageHandler(MainHandler):
             self.error = "All fields are required !!"
             self.render_sign_up_page(name=self.name, username=self.username,
                                      email=self.email, error=self.error)
+
+
+class LoginPageHandler(MainHandler):
+    def render_login_page(self, username="", password="", error=""):
+        self.render("login.html", username=username, password=password,
+                    error=error)
+
+    def get(self):
+        self.render_login_page()
+
+    def post(self):
+        self.username = self.request.get('username')
+        self.password = self.request.get('password')
+        if self.username and self.password:
+            self.user_exists = User.get_user_by_name(self.username, self.password)
+            # If user don't exists this block will execute
+            if not self.user_exists:
+                self.error = "User does not exist !!"
+                self.render_login_page(username=self.username,
+                                       error=self.error)
+            else:
+                self.valid_pwd = User.login(username=self.username,
+                                            password=self.password)
+                if self.valid_pwd:
+                    self.set_cookie('user_id', str(self.user_exists.key().id()))
+                    self.redirect('/home')
+                else:
+                    self.error = "Invalid password !!"
+                    self.render_login_page(username=self.username,
+                                           error=self.error)
+        else:
+            self.error = "All fields are required !!"
+            self.render_login_page(username=self.username, error=self.error)
+
 
 app = webapp2.WSGIApplication([
       ('/', MainPage),
