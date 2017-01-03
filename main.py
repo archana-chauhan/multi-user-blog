@@ -297,7 +297,7 @@ class PostPageHandler(MainHandler):
 
 class EditPostHandler(MainHandler):
     def get(self, post_id):
-        key = db.key.from_path('Post', int(post_id))
+        key = db.Key.from_path('Post', int(post_id))
         self.post = db.get(key)
         if self.user:
             if self.post:
@@ -316,7 +316,7 @@ class EditPostHandler(MainHandler):
         if self.user:
             self.subject = self.request.get('subject')
             self.content = self.request.get('content')
-            key = db.key.from_path('Path', int(post_id))
+            key = db.Key.from_path('Path', int(post_id))
             self.post = db.get(key)
             if self.subject and self.content:
                 self.post.subject = self.subject
@@ -332,7 +332,7 @@ class EditPostHandler(MainHandler):
 class DeletePostHandler(MainHandler):
     def get(self, post_id):
         if self.user:
-            key = db.key.from_path('Post', int(post_id))
+            key = db.Key.from_path('Post', int(post_id))
             self.post = db.get(key)
             if self.post:
                 if self.post.created_by_user == self.user.username:
@@ -346,7 +346,7 @@ class DeletePostHandler(MainHandler):
 
     def post(self, post_id):
         if self.user:
-            key = db.key.from_path('Post', int(post_id))
+            key = db.Key.from_path('Post', int(post_id))
             self.post = db.get(key)
             if self.post:
                 if self.post.created_by_user == self.user.username:
@@ -358,6 +358,57 @@ class DeletePostHandler(MainHandler):
                 self.redirect("/home")
         else:
             self.redirect("/login")
+
+
+class LikePostHandler(MainHandler):
+    def get(self, post_id):
+        if self.user:
+            key = db.Key.from_path('Post', int(post_id))
+            self.post = db.get(key)
+            if self.post.created_by_user == self.user.username:
+                self.redirect('/home')
+            else:
+                if self.post.total_likes == None:
+                    self.post.total_likes = 0
+                if self.user.username not in self.post.liked_by_users:
+                    self.post.total_likes += 1
+                    self.post.liked_by_users.append(self.user.username)
+                    self.post.put()
+                    self.redirect('/home')
+
+class CommentPostHandler(MainHandler):
+    def get(self, post_id):
+        key = db.Key.from_path('Post', int(post_id))
+        self.post = db.get(key)
+        self.comments = Comment.get_comments(int(post_id))
+        self.render("permalink.html", post=self.post,
+                        comments=self.comments, user=self.user)
+
+    def post(self, post_id):
+        key = db.Key.from_path('Post', int(post_id))
+        self.post = db.get(key)
+        if self.user:
+            self.comment == self.request.get('comment')
+            if self.comment:
+                c = Comment(comment=self.comment,
+                            comment_by_user=self.user.username,
+                            post_id=int(post_id))
+                c.put()
+                self.comments = Comment.get_comments(int(post_id))
+                self.render("permalink.html", post=self.post,
+                            comments=self.comments, user=self.user)
+            else:
+                self.redirect('/home')
+        else:
+            self.redirect('/login')
+
+
+class CommentEditHandler(MainHandler):
+    def get(self, comment_id, post_id):
+        commentKey = db.Key.from_path('Comment', int(comment_id))
+        self.comment = db.get(commentKey)
+        if self.comment.comment_by_user == self.user.username:
+
 
 
 class SignUpPageHandler(MainHandler):
