@@ -236,10 +236,47 @@ class Comment(db.Model):
         return comments
 
 
-class MainPage(webapp2.RequestHandler):
+class MainPage(MainHandler):
+    '''
+        This handler handles the main page of the blog post
+    '''
+    def render_homepage(self, username):
+        self.display_posts = db.GqlQuery("SELECT * FROM Post ORDER BY created_date_time DESC")  # NOQA
+        self.render("mainpage.html", display_posts=self.display_posts,
+                    username=username)
+
     def get(self):
-        self.response.headers['Content-Type'] = 'text/plain'
-        self.response.write('Hello world')
+        self.render_homepage(user=self.user)
+
+
+class NewPostHandler(MainHandler):
+    def render_page(self, user, subject="", content="", error=""):
+        self.render("newpost.html", user=user, subject=subject,
+                    content=content, error=error)
+
+    def get(self):
+        # Check first is user is logged in or not
+        if self.user:
+            self.render_page(user=self.user)
+        else:
+            self.redirect('/')
+
+    def post(self):
+        self.subject = self.request.get("subject")
+        self.content = self.request.get("content")
+        self.username = self.user.username
+        if self.subject and self.content:
+            post = Post(subject=self.subject, content=self.content,
+                        created_by_user=self.username)
+            post.put()
+            self.redirect('/%s' % str(b.key().id()))
+        else:
+            self.error = "All fields are required !!"
+            self.render_page(user=self.user, subject=self.subject,
+                             content=self.content, error=self.error)
+
+
+
 
 
 app = webapp2.WSGIApplication([
