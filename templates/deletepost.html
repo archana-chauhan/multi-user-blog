@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="col-xs-12 col-sm-8 col-sm-offset-2 col-md-4 col-md-offset-4">
+    <form method="post" action="">
+      <div class="panel panel-primary">
+        <div class="panel-heading">
+          <p class="text-center">Delete post</p>
+        </div>
+        <div class="panel-body">
+          <p class="text-center text-danger">Do you want to delete ?</p>
+        </div>
+        <div class="panel-footer">
+          <button type="submit" class="btn btn-danger">Delete</button>
+          <a href="/home" class="btn btn-default">Cancel</a>
+        </div>
+      </div>
+    </form>
+  </div>
+{% endblock %}

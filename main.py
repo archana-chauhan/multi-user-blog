@@ -329,7 +329,35 @@ class EditPostHandler(MainHandler):
                             subject=self.subject, content=self.content)
 
 
+class DeletePostHandler(MainHandler):
+    def get(self, post_id):
+        if self.user:
+            key = db.key.from_path('Post', int(post_id))
+            self.post = db.get(key)
+            if self.post:
+                if self.post.created_by_user == self.user.username:
+                    self.render("deletepost.html")
+                else:
+                    self.redirect("/home")
+            else:
+                self.redirect("/home")
+        else:
+            self.redirect("/login")
 
+    def post(self, post_id):
+        if self.user:
+            key = db.key.from_path('Post', int(post_id))
+            self.post = db.get(key)
+            if self.post:
+                if self.post.created_by_user == self.user.username:
+                    db.delete(key)
+                    self.redirect("/home")
+                else:
+                    self.redirect("/home")
+            else:
+                self.redirect("/home")
+        else:
+            self.redirect("/login")
 
 
 class SignUpPageHandler(MainHandler):
@@ -379,7 +407,7 @@ class SignUpPageHandler(MainHandler):
                                          email=self.email, error=self.error)
             else:
                 # Checking if username already exists or not
-                user = User.get_user_by_name(self.username)
+                user = User.get_user_by_username(self.username)
                 if user:
                     self.error = "Username already exists !! Please try "
                     "another"
@@ -391,8 +419,8 @@ class SignUpPageHandler(MainHandler):
                 else:
                     self.password_hash = make_pwd_hash(self.username,
                                                        self.password)
-                    user = User.user_register(self.name, self.password_hash,
-                                              self.password, self.email)
+                    user = User.user_register(self.name, self.username,
+                                              self.password_hash, self.email)
                     user.put()
                     self.set_cookie('user_id', str(user.key().id()))
                     self.redirect('/home')
@@ -415,17 +443,18 @@ class LoginPageHandler(MainHandler):
         self.username = self.request.get('username')
         self.password = self.request.get('password')
         if self.username and self.password:
-            self.user_exists = User.get_user_by_name(self.username, self.password)
+            self.user_exists = User.get_user_by_username(self.username)
             # If user don't exists this block will execute
             if not self.user_exists:
                 self.error = "User does not exist !!"
                 self.render_login_page(username=self.username,
                                        error=self.error)
             else:
-                self.valid_pwd = User.login(username=self.username,
-                                            password=self.password)
+                self.valid_pwd = User.user_login(username=self.username,
+                                                 password=self.password)
                 if self.valid_pwd:
-                    self.set_cookie('user_id', str(self.user_exists.key().id()))
+                    self.set_cookie('user_id',
+                                    str(self.user_exists.key().id()))
                     self.redirect('/home')
                 else:
                     self.error = "Invalid password !!"

@@ -1,28 +1,26 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="row">
   <div class="col-xs-12 col-sm-8 col-sm-offset-2 col-md-4 col-md-offset-4">
-    <div class="panel panel-primary">
-      <div class="panel-heading">
-        <p class="text-center">New Blog post</p>
+    <form method="post" action="">
+      <div class="panel panel-primary">
+        <div class="panel-heading">
+          <p class="text-center">New Blog post</p>
+        </div>
+        <div class="panel-body">
+            <input type="hidden" name="post_id" value="{{ post_id }}">
+            <div class="form-group">
+              <label for="subject">Subject</label>
+              <input type="text" class="form-control" name="subject" id="subject" value="{{ subject }}">
+            </div>
+            <div class="form-group">
+              <label for="content">Content</label>
+              <textarea id="content" name="content" class="form-control">{{ content }}</textarea>
+            </div>
+        </div>
+        <div class="panel-footer">
+          <button type="submit" class="btn btn-default">Edit</button>
+        </div>
       </div>
-      <div class="panel-body">
-        <form method="post" action="">
-          <input type="hidden" name="post_id" value="{{ post_id }}">
-          <div class="form-group">
-            <label for="subject">Subject</label>
-            <input type="text" class="form-control" name="subject" id="subject" value="{{ subject }}">
-          </div>
-          <div class="form-group">
-            <label for="content">Content</label>
-            <textarea id="content" name="content" class="form-control">{{ content }}</textarea>
-          </div>
-        </form>
-      </div>
-      <div class="panel-footer">
-        <button type="submit" class="btn btn-default">Edit</button>
-      </div>
-    </div>
+    </form>
   </div>
-</div>
 {% endblock %}
