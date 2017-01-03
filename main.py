@@ -119,6 +119,11 @@ class MainHandler(webapp2.RequestHandler):
         cookie_val = self.request.cookies.get(user)
         return cookie_val and check_secure_val(cookie_val)
 
+    def initialize(self, *a, **kw):
+        webapp2.RequestHandler.initialize(self, *a, **kw)
+        user_id = self.read_cookie('user_id')
+        self.user = user_id and User.get_user_by_id(int(user_id))
+
 
 # User model
 class User(db.Model):
@@ -250,31 +255,34 @@ class MainPage(MainHandler):
 
 
 class NewPostHandler(MainHandler):
-    def render_page(self, user, subject="", content="", error=""):
-        self.render("newpost.html", user=user, subject=subject,
-                    content=content, error=error)
+    def render_page(self, subject="", content="", error=""):
+        self.render("newpost.html", subject=subject, content=content,
+                    error=error)
 
     def get(self):
         # Check first is user is logged in or not
         if self.user:
-            self.render_page(user=self.user)
+            self.render_page()
         else:
             self.redirect('/')
 
     def post(self):
-        self.subject = self.request.get("subject")
-        self.content = self.request.get("content")
-        self.username = self.user.username
-        if self.subject and self.content:
-            post = Post(subject=self.subject, content=self.content,
-                        created_by_user=self.username)
-            post.put()
-            # Redirect to the newly created post page
-            self.redirect('/%s' % str(b.key().id()))
+        if self.user:
+            self.subject = self.request.get("subject")
+            self.content = self.request.get("content")
+            self.username = self.user.username
+            if self.subject and self.content:
+                post = Post(subject=self.subject, content=self.content,
+                            created_by_user=self.username)
+                post.put()
+                # Redirect to the newly created post page
+                self.redirect('/%s' % str(post.key().id()))
+            else:
+                self.error = "All fields are required !!"
+                self.render_page(subject=self.subject, content=self.content,
+                                 error=self.error)
         else:
-            self.error = "All fields are required !!"
-            self.render_page(user=self.user, subject=self.subject,
-                             content=self.content, error=self.error)
+            self.redirect('/login')
 
 
 class PostPageHandler(MainHandler):
@@ -285,6 +293,43 @@ class PostPageHandler(MainHandler):
             self.error(404)
             return
         self.render("permalink.html", post=self.post, user=self.user)
+
+
+class EditPostHandler(MainHandler):
+    def get(self, post_id):
+        key = db.key.from_path('Post', int(post_id))
+        self.post = db.get(key)
+        if self.user:
+            if self.post:
+                if self.post.created_by_user = self.user.username:
+                    self.render("editpost.html", post_id=post_id,
+                                subject=self.post.subject,
+                                content=self.post.content)
+                else:
+                    self.redirect('/')
+            else:
+                self.redirect('/')
+        else:
+            self.redirect('/login')
+
+    def post(self, post_id):
+        if self.user:
+            self.subject = self.request.get('subject')
+            self.content = self.request.get('content')
+            key = db.key.from_path('Path', int(post_id))
+            self.post = db.get(key)
+            if self.subject and self.content:
+                self.post.subject = self.subject
+                self.post.content = self.content
+                self.post.put()
+                self.redirect('/%s' % post_id)
+            else:
+                self.error = "All fields are required !!"
+                self.render("editpost.html", post_id=post_id,
+                            subject=self.subject, content=self.content)
+
+
+
 
 
 class SignUpPageHandler(MainHandler):
@@ -390,6 +435,20 @@ class LoginPageHandler(MainHandler):
             self.error = "All fields are required !!"
             self.render_login_page(username=self.username, error=self.error)
 
+
+class HomeHandler(MainHandler):
+    def get(self):
+        if self.user:
+            self.posts = Post.get_post_by_username(self.user.username)
+            self.render('home.html', user=self.user, posts=self.posts)
+        else:
+            self.redirect('/login')
+
+
+class LogoutHandler(MainHandler):
+    def get(self):
+        self.reponse.headers.add_header('Set-Cookie', 'user_id=; Path=/')
+        self.redirect('/')
 
 app = webapp2.WSGIApplication([
       ('/', MainPage),

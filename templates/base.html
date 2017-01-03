@@ -40,6 +40,17 @@
 
   <!-- Main content -->
   <div class="container">
+
+    {% if error != "" %}
+      <div class="row">
+        <div class="col-xs-12">
+          <div class="alert alert-dander" role="alert">
+            {{ error }}
+          </div>
+        </div>
+      </div>
+    {% endif %}
+
     {% block content%}
     {% endblock %}
   </div>
