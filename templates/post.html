@@ -1,6 +1,16 @@
 {% extends "base.html" %}
 {% block content %}
 
+{% if error %}
+  <div class="row">
+    <div class="col-xs-12">
+      <div class="alert alert-danger" role="alert">
+        {{ error }}
+      </div>
+    </div>
+  </div>
+{% endif %}
+
 <div class="row">
   <div class="col-md-12">
     <div class="panel panel-info">
@@ -11,12 +21,17 @@
         <p>{{ post.content }}</p>
       </div>
       <div class="panel-footer">
+        {% if post.created_by_user != user.username %}
         <a href="/like/{{ post.key().id() }}">
           <span class="glyphicon glyphicon-thumbs-up" aria-hidden="true"></span>
           &nbsp;{% if post.total_likes == None or post.total_likes == 0 %} 0
           {% else %} post.total_likes{% endif %} <span>likes<span>
         </a>
-
+        {% else %}
+          <span class="glyphicon glyphicon-thumbs-up" aria-hidden="true"></span>
+          &nbsp;{% if post.total_likes == None or post.total_likes == 0 %} 0
+          {% else %} post.total_likes{% endif %} <span>likes<span>
+        {% endif %}
         &nbsp;&nbsp;&nbsp;&nbsp;
 
         <a href="#comments">
@@ -55,7 +70,7 @@
     <div class="panel panel-success">
       <div class="panel-heading">
         <p>
-          <span class="text-left">USER : {{ comment.comment_by_user }}</span>
+          <span class="text-left">USER : {{ comment.comment_by_user }}</span><br>
           <span class="text-right">Posted time : {{ comment.created_date_time.strftime("%b %d, %Y") }}
         </p>
       </div>
@@ -63,8 +78,8 @@
         <p>{{ comment.comment }}</p>
       </div>
       {% if user %}
-        {%  if comment.created_by_user == user.username %}
-          <div class="panel-footer text-right">
+        {%  if comment.comment_by_user == user.username %}
+          <div class="panel-footer">
             <a class="btn btn-warning" href="/editcomment/{{ comment.key().id() }}">Edit</a>
             &nbsp;&nbsp;
             <a class="btn btn-danger" href="/deletecomment/{{ comment.key().id() }}">Delete</a>

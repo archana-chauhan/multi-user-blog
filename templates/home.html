@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 
-{% if error != "" %}
+{% if error %}
   <div class="row">
     <div class="col-md-12">
       <div class="alert alert-danger" role="alert">
@@ -23,30 +23,49 @@
   <div class="row">
     <div class="col-md-12">
       <div class="panel panel-primary">
-          <div class="panel-heading">
+
+        <div class="panel-heading">
             <p>Post by : {{ post.created_by_user }}
               <br>
             Posted on : {{ post.created_date_time.strftime("%b %d, %Y") }}</p>
             <p><span class="label-danger">Subject</span> : {{ post.subject }} </p>
         </div>
+
         <div class="panel-body">
           <p>{{ post.content.replace('\n', '<br>') }}</p>
         </div>
+
         <div class="panel-footer">
+
+            {% if  post.created_by_user != user.username %}
+
             <a href="/like/{{ post.key().id() }}">
               <span class="glyphicon glyphicon-thumbs-up" aria-hidden="true"></span>
               &nbsp;{% if post.total_likes == None or post.total_likes == 0 %} 0
               {% else %} post.total_likes{% endif %} <span>likes<span>
+
             </a>
+
+            {% else %}
+
+              <span class="glyphicon glyphicon-thumbs-up" aria-hidden="true"></span>
+              &nbsp;{% if post.total_likes == None or post.total_likes == 0 %} 0
+              {% else %} post.total_likes{% endif %} <span>likes<span>
+
+            {% endif %}
             &nbsp;&nbsp;&nbsp;&nbsp;
 
             <a href="/comment/{{ post.key().id() }}">
               <span class="glyphicon glyphicon-comment" aria-hidder="true"></span>
               &nbsp; comment
             </a>
+
             &nbsp;&nbsp;&nbsp;&nbsp;
+
             <a class="btn btn-success" href="/post/{{ post.key().id() }}">View</a>
+
             &nbsp;&nbsp;
+
             {% if user %}
               {% if user.username == post.created_by_user %}
                 <a class="btn btn-warning" href="/editpost/{{ post.key().id() }}">Edit</a>

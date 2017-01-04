@@ -217,7 +217,7 @@ class Comment(db.Model):
 
     @classmethod
     def get_comments(cls, post_id):
-        comments = db.GqlQuery("SELECT * FROM Comment WHERE post_id= :post_id", post_id=int(post_id))   # NOQA
+        comments = db.GqlQuery("SELECT * FROM Comment WHERE post_id= :post_id ORDER BY created_date_time ASC", post_id=int(post_id))   # NOQA
         return comments
 
 
@@ -406,25 +406,27 @@ class CommentPostHandler(Handler):
     #     self.comments = Comment.get_comments(int(post_id))
     #     self.render("permalink.html", post=self.post,
     #                     comments=self.comments, user=self.user)
-    #
-    # def post(self, post_id):
-    #     key = db.Key.from_path('Post', int(post_id))
-    #     self.post = db.get(key)
-    #     if self.user:
-    #         self.comment == self.request.get('comment')
-    #         if self.comment:
-    #             c = Comment(comment=self.comment,
-    #                         comment_by_user=self.user.username,
-    #                         post_id=int(post_id))
-    #             c.put()
-    #             self.comments = Comment.get_comments(int(post_id))
-    #             self.render("permalink.html", post=self.post,
-    #                         comments=self.comments, user=self.user)
-    #         else:
-    #             self.redirect('/home')
-    #     else:
-    #         self.redirect('/login')
-    pass
+
+    def post(self, post_id):
+        key = db.Key.from_path('Post', int(post_id))
+        self.post = db.get(key)
+        if self.user:
+            self.comment = self.request.get('comment')
+            if self.comment:
+                c = Comment(comment=self.comment,
+                            comment_by_user=self.user.username,
+                            post_id=int(post_id))
+                c.put()
+                self.comments = Comment.get_comments(int(post_id))
+                #self.render("post.html", post=self.post,
+                #            comments=self.comments, user=self.user)
+                self.redirect('/post/%s' % post_id)
+            else:
+                self.error = "Comment cannot be blank !!"
+                self.redirect('/post/post_id', error=self.error)
+        else:
+            self.redirect('/login')
+
 
 
 class CommentEditHandler(Handler):
