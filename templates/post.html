@@ -15,12 +15,14 @@
   <div class="col-md-12">
     <div class="panel panel-info">
       <div class="panel-heading">
-        <h1>{{ post.subject }}</h1>
+        <h1>{{ post.subject.replace('\n', '<br>') | safe }}</h1>
       </div>
       <div class="panel-body">
-        <p>{{ post.content }}</p>
+        <p>{{ post.content.replace('\n', '<br>') | safe }}</p>
       </div>
       <div class="panel-footer">
+        <span class="text-success">Last modified : {{ post.last_modified.strftime("%d/%b/%Y (%I:%M %p)") }}</span>
+        &nbsp;&nbsp;
         {% if post.created_by_user != user.username %}
         <a href="/like/{{ post.key().id() }}">
           <span class="glyphicon glyphicon-thumbs-up" aria-hidden="true"></span>
@@ -81,22 +83,26 @@
     <div class="panel panel-success">
       <div class="panel-heading">
         <p>
-          <span class="text-left">USER : {{ comment.comment_by_user }}</span><br>
-          <span class="text-right">Posted time : {{ comment.created_date_time.strftime("%b %d, %Y") }}
+          <span class="text-left">Posted by : {{ comment.comment_by_user }}</span><br>
+          <span class="text-right">Posted time : {{ comment.created_date_time.strftime("%b %d, %Y") }}</span>
         </p>
       </div>
       <div class="panel-body">
-        <p>{{ comment.comment }}</p>
+        <p>{{ comment.comment.replace('\n', '<br>') | safe }}</p>
       </div>
+      <div class="panel-footer">
+        Last modified : {{ comment.last_modified.strftime("%d/%b/%Y (%I:%M %p)") }}
+        &nbsp;&nbsp;
       {% if user %}
         {%  if comment.comment_by_user == user.username %}
-          <div class="panel-footer">
+
             <a class="btn btn-warning" href="/editcomment/{{ comment.key().id() }}">Edit</a>
             &nbsp;&nbsp;
             <a class="btn btn-danger" href="/deletecomment/{{ comment.key().id() }}">Delete</a>
-          </div>
+
         {% endif %}
       {% endif %}
+      </div>
     </div>
   </div>
 </div>

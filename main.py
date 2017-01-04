@@ -173,8 +173,8 @@ class Post(db.Model):
                 liked the post
 
     '''
-    subject = db.StringProperty(required=True)
-    content = db.StringProperty(required=True)
+    subject = db.TextProperty(required=True)
+    content = db.TextProperty(required=True)
     created_date_time = db.DateTimeProperty(auto_now_add=True)
     last_modified = db.DateTimeProperty(auto_now=True)
     created_by_user = db.StringProperty(required=False)
