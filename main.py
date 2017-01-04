@@ -310,70 +310,77 @@ class PostPageHandler(Handler):
 
 
 class EditPostHandler(Handler):
-    # def get(self, post_id):
-    #     key = db.Key.from_path('Post', int(post_id))
-    #     self.post = db.get(key)
-    #     if self.user:
-    #         if self.post:
-    #             if self.post.created_by_user == self.user.username:
-    #                 self.render("editpost.html", post_id=post_id,
-    #                             subject=self.post.subject,
-    #                             content=self.post.content)
-    #             else:
-    #                 self.redirect('/')
-    #         else:
-    #             self.redirect('/')
-    #     else:
-    #         self.redirect('/login')
-    #
-    # def post(self, post_id):
-    #     if self.user:
-    #         self.subject = self.request.get('subject')
-    #         self.content = self.request.get('content')
-    #         key = db.Key.from_path('Path', int(post_id))
-    #         self.post = db.get(key)
-    #         if self.subject and self.content:
-    #             self.post.subject = self.subject
-    #             self.post.content = self.content
-    #             self.post.put()
-    #             self.redirect('/%s' % post_id)
-    #         else:
-    #             self.error = "All fields are required !!"
-    #             self.render("editpost.html", post_id=post_id,
-    #                         subject=self.subject, content=self.content)
-    pass
+    def get(self, post_id):
+        key = db.Key.from_path('Post', int(post_id))
+        self.post = db.get(key)
+        if self.user:
+            if self.post:
+                if self.post.created_by_user == self.user.username:
+                    self.render("editpost.html", post_id=post_id,
+                                post=self.post, subject=self.post.subject,
+                                content=self.post.content)
+                else:
+                    self.redirect('/home')
+            else:
+                self.redirect('/')
+        else:
+            self.redirect('/login')
+
+    def post(self, post_id):
+        if self.user:
+            subject = self.request.get("subject")
+            content = self.request.get("content")
+            key = db.Key.from_path('Path', int(post_id))
+            self.post = db.get(key)
+            if subject and content:
+                self.post.subject = subject
+                self.post.content = content
+                self.post.put()
+                self.redirect('/post/%s' % post_id)
+            else:
+                error = "All fields are required !!"
+                self.render("editpost.html", post_id=post_id,
+                            subject=subject,
+                            content=content,
+                            post=post, error=error)
+        else:
+            self.redirect('/login')
+
 
 
 class DeletePostHandler(Handler):
-    # def get(self, post_id):
-    #     if self.user:
-    #         key = db.Key.from_path('Post', int(post_id))
-    #         self.post = db.get(key)
-    #         if self.post:
-    #             if self.post.created_by_user == self.user.username:
-    #                 self.render("deletepost.html")
-    #             else:
-    #                 self.redirect("/home")
-    #         else:
-    #             self.redirect("/home")
-    #     else:
-    #         self.redirect("/login")
-    #
-    # def post(self, post_id):
-    #     if self.user:
-    #         key = db.Key.from_path('Post', int(post_id))
-    #         self.post = db.get(key)
-    #         if self.post:
-    #             if self.post.created_by_user == self.user.username:
-    #                 db.delete(key)
-    #                 self.redirect("/home")
-    #             else:
-    #                 self.redirect("/home")
-    #         else:
-    #             self.redirect("/home")
-    #     else:
-    #         self.redirect("/login")
-    pass
+    def get(self, post_id):
+        if self.user:
+            key = db.Key.from_path('Post', int(post_id))
+            self.post = db.get(key)
+            if self.post:
+                if self.post.created_by_user == self.user.username:
+                    if self.post.created_by_user == self.user.username:
+                        self.render("deletepost.html", post_id=post_id)
+                    else:
+                        self.redirect("/home")
+                else:
+                    self.redirect('/home')
+            else:
+                self.redirect("/home")
+        else:
+            self.redirect("/login")
+
+    def post(self, post_id):
+        if self.user:
+            key = db.Key.from_path('Post', int(post_id))
+            self.post = db.get(key)
+            if self.post:
+                if self.post.created_by_user == self.user.username:
+                    db.delete(key)
+                    self.redirect("/home")
+                else:
+                    self.redirect("/home")
+            else:
+                self.redirect("/home")
+        else:
+            self.redirect("/login")
+
 
 class LikePostHandler(Handler):
     # def get(self, post_id):
