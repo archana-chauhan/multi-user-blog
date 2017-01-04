@@ -282,6 +282,9 @@ class MainPageHandler(Handler):
 
 
 class NewPostHandler(Handler):
+    '''
+        NewPostHandler: Handler handles new post that are posted
+    '''
     def render_page(self, subject="", content="", error="", user=None):
         self.render("newpost.html", subject=subject, content=content,
                     error=error, user=user)
@@ -294,6 +297,9 @@ class NewPostHandler(Handler):
             self.redirect('/login')
 
     def post(self):
+        '''
+            It first checks for user and then stores post in the database
+        '''
         if self.user:
             self.subject = self.request.get("subject")
             self.content = self.request.get("content")
@@ -313,6 +319,9 @@ class NewPostHandler(Handler):
 
 
 class PostPageHandler(Handler):
+    '''
+        PostPageHandler: This handler is renders a particular post
+    '''
     def get(self, post_id):
         key = db.Key.from_path('Post', int(post_id))
         self.post = db.get(key)
@@ -325,6 +334,9 @@ class PostPageHandler(Handler):
 
 
 class EditPostHandler(Handler):
+    '''
+        EditPostHandler : This handler handles post editing.
+    '''
     def get(self, post_id):
         key = db.Key.from_path('Post', int(post_id))
         self.post = db.get(key)
@@ -342,6 +354,10 @@ class EditPostHandler(Handler):
             self.redirect('/login')
 
     def post(self, post_id):
+        '''
+        It first checks if the user is logged in then checks if the post
+        exists, if not redirect to home.
+        '''
         if self.user:
             postKey = db.Key.from_path('Post', int(post_id))
             self.post = db.get(postKey)
@@ -367,6 +383,9 @@ class EditPostHandler(Handler):
 
 
 class DeletePostHandler(Handler):
+    '''
+        DeletePostHandler: This handler handles post deletion
+    '''
     def get(self, post_id):
         if self.user:
             key = db.Key.from_path('Post', int(post_id))
@@ -385,6 +404,11 @@ class DeletePostHandler(Handler):
             self.redirect("/login")
 
     def post(self, post_id):
+        '''
+        This block first if user is logged in or not, if logged in
+        then checks the request made for deletion of post is in database,
+        if found it deletes that post.
+        '''
         if self.user:
             key = db.Key.from_path('Post', int(post_id))
             self.post = db.get(key)
@@ -404,6 +428,9 @@ class DeletePostHandler(Handler):
 
 
 class LikePostHandler(Handler):
+    '''
+        LikePostHandler : this handler handles the post likes
+    '''
     def get(self, post_id):
         if self.user:
             key = db.Key.from_path('Post', int(post_id))
@@ -431,13 +458,9 @@ class LikePostHandler(Handler):
 
 
 class CommentPostHandler(Handler):
-    # def get(self, post_id):
-    #     key = db.Key.from_path('Post', int(post_id))
-    #     self.post = db.get(key)
-    #     self.comments = Comment.get_comments(int(post_id))
-    #     self.render("permalink.html", post=self.post,
-    #                     comments=self.comments, user=self.user)
-
+    '''
+        CommentPostHandler : This handler handles the post comments
+    '''
     def post(self, post_id):
         key = db.Key.from_path('Post', int(post_id))
         self.post = db.get(key)
@@ -458,6 +481,9 @@ class CommentPostHandler(Handler):
 
 
 class CommentEditHandler(Handler):
+    '''
+        CommentEditHandler : This handler handles comment edits
+    '''
     def get(self, comment_id):
         if self.user:
             commentKey = db.Key.from_path('Comment', int(comment_id))
@@ -474,6 +500,10 @@ class CommentEditHandler(Handler):
             self.redirect('/login')
 
     def post(self, comment_id):
+        '''
+        This block first checks if user is logged in or not, if logged in
+        it checks for the comment and if it exists it edit comment.
+        '''
         if self.user:
             commentKey = db.Key.from_path('Comment', int(comment_id))
             self.comment = db.get(commentKey)
@@ -497,6 +527,9 @@ class CommentEditHandler(Handler):
 
 
 class CommentDeleteHandler(Handler):
+    '''
+        CommentDeleteHandler : This handler handles comment deletion
+    '''
     def get(self, comment_id):
         if self.user:
             commentKey = db.Key.from_path('Comment', int(comment_id))
@@ -514,6 +547,9 @@ class CommentDeleteHandler(Handler):
 
 
 class SignUpPageHandler(Handler):
+    '''
+        SignUpPageHandler : This handler handles sign up
+    '''
     def render_sign_up_page(self, name="", username="", password="", verify="",
                             email="", error=""):
         self.render("signup.html", name=name, username=username,
@@ -526,19 +562,24 @@ class SignUpPageHandler(Handler):
             self.render_sign_up_page()
 
     def post(self):
+        # Retrieve data from sign up page
         self.name = self.request.get('name')
         self.username = self.request.get('username')
         self.password = self.request.get('password')
         self.verify = self.request.get('verify')
         self.email = self.request.get('email')
-        # Checks for name first
+        # Checks for name first if it is empty it display error
         if not self.name:
             self.error = "Please enter name !!"
             self.render_sign_up_page(name=self.name,
                                      username=self.username,
                                      email=self.email, error=self.error)
             return
-
+        '''
+        This block checks for other entries of details other than name and
+        and if each entry is correct it signed up the user and redirect it
+        to home page.
+        '''
         if self.username and self.password and self.verify and self.email:
             if not valid_username(self.username):
                 self.error = "Not a valid username, please enter a valid"
@@ -589,6 +630,9 @@ class SignUpPageHandler(Handler):
 
 
 class LoginPageHandler(Handler):
+    '''
+        LoginPageHandler : This handler handles user login
+    '''
     def render_login_page(self, username="", password="", error=""):
         self.render("login.html", username=username, error=error)
 
@@ -625,6 +669,9 @@ class LoginPageHandler(Handler):
 
 
 class HomePageHandler(Handler):
+    '''
+        HomePageHandler : This handler handles user home page
+    '''
     def render_home_page(self, user=None, posts=None, error=""):
         self.render("home.html", user=user, posts=posts, error=error)
 
@@ -643,6 +690,9 @@ class HomePageHandler(Handler):
 
 
 class LogoutHandler(Handler):
+    '''
+        LogoutHandler : This handler hanles user logout
+    '''
     def get(self):
         self.response.headers.add_header('Set-Cookie', 'user_id=; Path=/')
         self.redirect('/')
