@@ -16,7 +16,7 @@ template_dir = os.path.join(os.path.dirname(__file__), 'templates')
 jinja_env = jinja2.Environment(loader=jinja2.FileSystemLoader(template_dir),
                                autoescape=True)
 
-SECRET = 'du.uyX9fE~Tb6.pp&U3D-OsmYO,Gqi$^jS34tzu9'
+SECRET = 'du.uyX9fE~Tb6.pp&Uub-OsmYO,Gqi$^jS34tz75'
 
 # Regular expression to validate username
 RE_USER = re.compile(r"^[a-zA-Z0-9_-]{3,20}$")
@@ -137,8 +137,8 @@ class User(db.Model):
             user_register : function creates hash of password then create data
             entity of User(model) class
         '''
-        # password_hash = make_pwd_hash(username, password)
-        return User(name=name, username=username, password=password,
+        password_hash = make_pwd_hash(username, password)
+        return User(name=name, username=username, password=password_hash,
                     email=email)
 
     @classmethod
@@ -150,7 +150,8 @@ class User(db.Model):
             login. If it matches it returns true else return false
         '''
         user = cls.get_user_by_username(username)
-        return password == user.password
+        password_hashed = user.password
+        return valid_pwd(username, password, password_hashed)
 
 
 # Post model
@@ -673,7 +674,14 @@ class HomePageHandler(Handler):
         HomePageHandler : This handler handles user home page
     '''
     def render_home_page(self, user=None, posts=None, error=""):
-        self.render("home.html", user=user, posts=posts, error=error)
+        post_count = Post.total_post_by_users(user.username)
+        error = ""
+        if post_count == 0 or post_count == -1:
+            error = "You have no post of your own !!"
+            self.render("home.html", user=user, posts=posts, error=error)
+        else:
+            all_posts = Post.get_post_by_username(user.username)
+            self.render("home.html", posts=all_posts, user=user)
 
     def get(self):
         if self.user:
