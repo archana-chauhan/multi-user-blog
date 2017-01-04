@@ -466,6 +466,22 @@ class CommentEditHandler(Handler):
             self.redirect('/login')
 
 
+class CommentDeleteHandler(Handler):
+    def get(self, comment_id):
+        if self.user:
+            commentKey = db.Key.from_path('Comment', int(comment_id))
+            self.comment = db.get(commentKey)
+            if self.comment:
+                if self.comment.comment_by_user == self.user.username:
+                    db.delete(commentKey)
+                    self.redirect('/post/%s' % self.comment.post_id)
+                else:
+                    self.redirect('/home')
+            else:
+                self.redirect('/home')
+        else:
+            self.redirect('/login')
+
 class SignUpPageHandler(Handler):
     def render_sign_up_page(self, name="", username="", password="", verify="",
                             email="", error=""):
@@ -612,5 +628,6 @@ app = webapp2.WSGIApplication([
       ('/deletepost/([0-9]+)', DeletePostHandler),
       ('/like/([0-9]+)', LikePostHandler),
       ('/comment/([0-9]+)', CommentPostHandler),
-      ('/editcomment/([0-9]+)', CommentEditHandler)
+      ('/editcomment/([0-9]+)', CommentEditHandler),
+      ('/deletecomment/([0-9]+)', CommentDeleteHandler)
       ], debug=True)
