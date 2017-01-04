@@ -383,21 +383,31 @@ class DeletePostHandler(Handler):
 
 
 class LikePostHandler(Handler):
-    # def get(self, post_id):
-    #     if self.user:
-    #         key = db.Key.from_path('Post', int(post_id))
-    #         self.post = db.get(key)
-    #         if self.post.created_by_user == self.user.username:
-    #             self.redirect('/home')
-    #         else:
-    #             if self.post.total_likes == None:
-    #                 self.post.total_likes = 0
-    #             if self.user.username not in self.post.liked_by_users:
-    #                 self.post.total_likes += 1
-    #                 self.post.liked_by_users.append(self.user.username)
-    #                 self.post.put()
-    #                 self.redirect('/home')
-    pass
+    def get(self, post_id):
+        if self.user:
+            key = db.Key.from_path('Post', int(post_id))
+            self.post = db.get(key)
+            if self.post:
+                if self.post.created_by_user == self.user.username:
+                    self.redirect('/home')
+                else:
+                    if self.post.total_likes == None:
+                        self.post.total_likes = 0
+                    if self.user.username not in self.post.liked_by_users:
+                        self.post.total_likes += 1
+                        self.post.liked_by_users.append(self.user.username)
+                        self.post.put()
+                        self.redirect('/post/%s' % int(post_id))
+                    else:
+                        self.post.total_likes -= 1
+                        self.post.liked_by_users.remove(self.user.username)
+                        self.post.put()
+                        self.redirect('/post/%s' % int(post_id))
+            else:
+                self.redirect('/home')
+        else:
+            self.redirect('/login')
+
 
 class CommentPostHandler(Handler):
     # def get(self, post_id):

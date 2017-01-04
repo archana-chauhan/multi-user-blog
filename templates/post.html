@@ -25,12 +25,12 @@
         <a href="/like/{{ post.key().id() }}">
           <span class="glyphicon glyphicon-thumbs-up" aria-hidden="true"></span>
           &nbsp;{% if post.total_likes == None or post.total_likes == 0 %} 0
-          {% else %} post.total_likes{% endif %} <span>likes<span>
+          {% else %} {{ post.total_likes }}{% endif %} <span>likes<span>
         </a>
         {% else %}
           <span class="glyphicon glyphicon-thumbs-up" aria-hidden="true"></span>
           &nbsp;{% if post.total_likes == None or post.total_likes == 0 %} 0
-          {% else %} post.total_likes{% endif %} <span>likes<span>
+          {% else %} {{ post.total_likes }} {% endif %} <span>likes<span>
         {% endif %}
         &nbsp;&nbsp;&nbsp;&nbsp;
 
@@ -38,6 +38,17 @@
           <span class="glyphicon glyphicon-comment" aria-hidder="true"></span>
           &nbsp; comment
         </a>
+
+        &nbsp;&nbsp;
+
+        {% if user %}
+          {% if user.username == post.created_by_user %}
+            <a class="btn btn-warning" href="/editpost/{{ post.key().id() }}">Edit</a>
+            &nbsp;&nbsp;
+            <a class="btn btn-danger" href="/deletepost/{{ post.key().id() }}">Delete</a>
+          {% endif %}
+        {% endif  %}
+
       </div>
     </div>
   </div>

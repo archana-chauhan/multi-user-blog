@@ -37,25 +37,13 @@
 
         <div class="panel-footer">
 
-            {% if  post.created_by_user != user.username %}
-
-            <a href="/like/{{ post.key().id() }}">
               <span class="glyphicon glyphicon-thumbs-up" aria-hidden="true"></span>
               &nbsp;{% if post.total_likes == None or post.total_likes == 0 %} 0
-              {% else %} post.total_likes{% endif %} <span>likes<span>
+              {% else %} {{ post.total_likes}} {% endif %} <span>likes<span>
 
-            </a>
-
-            {% else %}
-
-              <span class="glyphicon glyphicon-thumbs-up" aria-hidden="true"></span>
-              &nbsp;{% if post.total_likes == None or post.total_likes == 0 %} 0
-              {% else %} post.total_likes{% endif %} <span>likes<span>
-
-            {% endif %}
             &nbsp;&nbsp;&nbsp;&nbsp;
 
-            <a href="/comment/{{ post.key().id() }}">
+            <a href="/post/{{ post.key().id() }}">
               <span class="glyphicon glyphicon-comment" aria-hidder="true"></span>
               &nbsp; comment
             </a>
