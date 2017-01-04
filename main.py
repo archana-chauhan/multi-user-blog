@@ -430,15 +430,40 @@ class CommentPostHandler(Handler):
 
 
 class CommentEditHandler(Handler):
-    # def get(self, comment_id, post_id):
-    #     commentKey = db.Key.from_path('Comment', int(comment_id))
-    #     self.comment = db.get(commentKey)
-    #     if self.comment.comment_by_user == self.user.username:
-    #         self.render('editcomment.html', comment=self.comment,
-    #                     user=self.user)
-    #     else:
-    #         self.render()
-    pass
+    def get(self, comment_id):
+        if self.user:
+            commentKey = db.Key.from_path('Comment', int(comment_id))
+            self.comment = db.get(commentKey)
+            if self.comment:
+                if self.comment.comment_by_user == self.user.username:
+                    self.render("editcomment.html", comment=self.comment,
+                                user=self.user)
+                else:
+                    self.redirect('/post/%s' % self.comment.post_id)
+            else:
+                self.redirect('/home')
+
+        else:
+            self.redirect('/login')
+
+    def post(self, comment_id):
+        if self.user:
+            commentKey = db.Key.from_path('Comment', int(comment_id))
+            self.comment = db.get(commentKey)
+            if self.comment:
+                editedComment = self.request.get("comment")
+                if editedComment:
+                    self.comment.comment = editedComment
+                    self.comment.put()
+                    self.redirect('/post/%s' % self.comment.post_id)
+                else:
+                    self.error = "Comment cannot be blank!!"
+                    self.render("editcomment.html", comment=self.comment,
+                                user=self.user, error=self.error)
+            else:
+                self.redirect('/home')
+        else:
+            self.redirect('/login')
 
 
 class SignUpPageHandler(Handler):
@@ -586,5 +611,6 @@ app = webapp2.WSGIApplication([
       ('/editpost/([0-9]+)', EditPostHandler),
       ('/deletepost/([0-9]+)', DeletePostHandler),
       ('/like/([0-9]+)', LikePostHandler),
-      ('/comment/([0-9]+)', CommentPostHandler)
+      ('/comment/([0-9]+)', CommentPostHandler),
+      ('/editcomment/([0-9]+)', CommentEditHandler)
       ], debug=True)

@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block content %}
+
+{% if error %}
+  <div class="row">
+    <div class="col-xs-12">
+      <div class="alert alert-danger" role="alert">
+        {{ error }}
+      </div>
+    </div>
+  </div>
+{% endif %}
+
+<div class="row">
+  <div class="col-sm-8 col-sm-offset-2">
+    <form action="/editcomment/{{ comment.key().id() }}" method="post">
+    <div class="panel panel-default">
+      <div class="panel-heading text-center">
+        Edit comment
+      </div>
+      <div class="panel-body">
+        <textarea class="form-control" style="height:100px;" name="comment">{{ comment.comment }}</textarea>
+      </div>
+      <div class="panel-footer text-right">
+        <button type="submit" class="btn btn-primary">Edit Comment</button>
+        <a class="btn btn-default" href="/post/{{ comment.post_id }}">Cancel</a>
+      </div>
+    </div>
+    </form>
+  </div>
+</div>
+
+
+{% endblock %}
