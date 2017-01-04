@@ -16,8 +16,8 @@ template_dir = os.path.join(os.path.dirname(__file__), 'templates')
 jinja_env = jinja2.Environment(loader=jinja2.FileSystemLoader(template_dir),
                                autoescape=True)
 
-#SECRET = 'du.uyX9fE~Tb6.pp&U3D-OsmYO,Gqi$^jS34tzu9'
-SECRET = 'gfdgf78h97.jk,shfsgsgeieu..t45d.gd.g'
+SECRET = 'du.uyX9fE~Tb6.pp&U3D-OsmYO,Gqi$^jS34tzu9'
+
 # Regular expression to validate username
 RE_USER = re.compile(r"^[a-zA-Z0-9_-]{3,20}$")
 
@@ -150,8 +150,6 @@ class User(db.Model):
             login. If it matches it returns true else return false
         '''
         user = cls.get_user_by_username(username)
-        # hashed_password = user.password
-        #return valid_pwd(username, password, hashed_password)
         return password == user.password
 
 
@@ -179,18 +177,29 @@ class Post(db.Model):
     content = db.StringProperty(required=True)
     created_date_time = db.DateTimeProperty(auto_now_add=True)
     last_modified = db.DateTimeProperty(auto_now=True)
-    created_by_user = db.StringProperty(required=False) #store username of user
+    created_by_user = db.StringProperty(required=False)
     total_likes = db.IntegerProperty(required=False)
     liked_by_users = db.ListProperty(str)
-
-    # def render(self):
-    #     self._render_text = self.content.replace('\n', '<br>')
-    #     return render_str("post.html", post=self)
 
     @classmethod
     def get_post_by_username(cls, username):
         posts = db.GqlQuery("SELECT * FROM Post WHERE created_by_user = :username ORDER BY created_date_time DESC", username=username)  # NOQA
         return posts
+
+    @classmethod
+    def get_all_posts(cls):
+        posts = db.GqlQuery("SELECT * FROM Post ORDER BY created_date_time DESC")  # NOQA
+        return posts
+
+    @classmethod
+    def total_post_by_users(cls, username):
+        total_post = db.GqlQuery("SELECT * FROM Post WHERE created_by_user= :username", username=username).count()  # NOQA
+        return total_post
+
+    @classmethod
+    def total_posts(cls):
+        total_post = db.GqlQuery("SELECT * FROM Post").count()
+        return total_post
 
 
 # Comment model
@@ -254,9 +263,16 @@ class MainPageHandler(Handler):
     '''
         This handler handles the main page of the blog post
     '''
-    def render_main_page(self, user=None):
-        self.all_posts = db.GqlQuery("SELECT * FROM Post ORDER BY created_date_time DESC")  # NOQA
-        self.render("mainpage.html", posts=self.all_posts, user=user)
+    def render_main_page(self, user=None, posts=None):
+        post_count = Post.total_posts()  # NOQA
+        error = ""
+        if post_count == 0 or post_count == -1:
+            error = "No post found !!!"
+            self.render("mainpage.html", posts=posts, user=user,
+                        error=error)
+        else:
+            all_posts = Post.get_all_posts()
+            self.render("mainpage.html", posts=all_posts, user=user)
 
     def get(self):
         if self.user:
@@ -266,14 +282,14 @@ class MainPageHandler(Handler):
 
 
 class NewPostHandler(Handler):
-    def render_page(self, subject="", content="", error=""):
+    def render_page(self, subject="", content="", error="", user=None):
         self.render("newpost.html", subject=subject, content=content,
-                    error=error)
+                    error=error, user=user)
 
     def get(self):
         # Check first is user is logged in or not
         if self.user:
-            self.render_page()
+            self.render_page(user=self.user)
         else:
             self.redirect('/login')
 
@@ -296,17 +312,16 @@ class NewPostHandler(Handler):
             self.redirect('/login')
 
 
-
 class PostPageHandler(Handler):
     def get(self, post_id):
         key = db.Key.from_path('Post', int(post_id))
         self.post = db.get(key)
         if not self.post:
-            self.error(404)
+            self.redirect('/')
             return
-        comments = Comment.get_comments(post_id)
+        self.comments = Comment.get_comments(post_id)
         self.render("post.html", post=self.post, user=self.user,
-                    comments=comments)
+                    comments=self.comments)
 
 
 class EditPostHandler(Handler):
@@ -328,24 +343,27 @@ class EditPostHandler(Handler):
 
     def post(self, post_id):
         if self.user:
-            subject = self.request.get("subject")
-            content = self.request.get("content")
-            key = db.Key.from_path('Path', int(post_id))
-            self.post = db.get(key)
-            if subject and content:
-                self.post.subject = subject
-                self.post.content = content
-                self.post.put()
-                self.redirect('/post/%s' % post_id)
+            postKey = db.Key.from_path('Post', int(post_id))
+            self.post = db.get(postKey)
+            if self.post:
+                if self.post.created_by_user == self.user.username:
+                    sub = self.request.get("subject")
+                    cont = self.request.get("content")
+                    if sub and cont:
+                        self.post.subject = sub
+                        self.post.content = cont
+                        self.post.put()
+                        self.redirect('/post/%s' % int(post_id))
+                    else:
+                        self.error = "All fields are required!!"
+                        self.render("editpost.html", error=self.error,
+                                    subject=sub, content=cont, post=self.post)
+                else:
+                    self.redirect('/home')
             else:
-                error = "All fields are required !!"
-                self.render("editpost.html", post_id=post_id,
-                            subject=subject,
-                            content=content,
-                            post=post, error=error)
+                self.redirect('/home')
         else:
             self.redirect('/login')
-
 
 
 class DeletePostHandler(Handler):
@@ -371,8 +389,11 @@ class DeletePostHandler(Handler):
             key = db.Key.from_path('Post', int(post_id))
             self.post = db.get(key)
             if self.post:
+                comments = Comment.get_comments(post_id)
                 if self.post.created_by_user == self.user.username:
                     db.delete(key)
+                    for comment in comments:
+                        db.delete(comment)
                     self.redirect("/home")
                 else:
                     self.redirect("/home")
@@ -391,7 +412,7 @@ class LikePostHandler(Handler):
                 if self.post.created_by_user == self.user.username:
                     self.redirect('/home')
                 else:
-                    if self.post.total_likes == None:
+                    if self.post.total_likes is None:
                         self.post.total_likes = 0
                     if self.user.username not in self.post.liked_by_users:
                         self.post.total_likes += 1
@@ -428,15 +449,12 @@ class CommentPostHandler(Handler):
                             post_id=int(post_id))
                 c.put()
                 self.comments = Comment.get_comments(int(post_id))
-                #self.render("post.html", post=self.post,
-                #            comments=self.comments, user=self.user)
                 self.redirect('/post/%s' % post_id)
             else:
                 self.error = "Comment cannot be blank !!"
-                self.redirect('/post/post_id', error=self.error)
+                self.redirect('/post/%s' % post_id)
         else:
             self.redirect('/login')
-
 
 
 class CommentEditHandler(Handler):
@@ -452,7 +470,6 @@ class CommentEditHandler(Handler):
                     self.redirect('/post/%s' % self.comment.post_id)
             else:
                 self.redirect('/home')
-
         else:
             self.redirect('/login')
 
@@ -461,15 +478,18 @@ class CommentEditHandler(Handler):
             commentKey = db.Key.from_path('Comment', int(comment_id))
             self.comment = db.get(commentKey)
             if self.comment:
-                editedComment = self.request.get("comment")
-                if editedComment:
-                    self.comment.comment = editedComment
-                    self.comment.put()
-                    self.redirect('/post/%s' % self.comment.post_id)
+                if self.comment.comment_by_user == self.user.username:
+                    editedComment = self.request.get("comment")
+                    if editedComment:
+                        self.comment.comment = editedComment
+                        self.comment.put()
+                        self.redirect('/post/%s' % int(self.comment.post_id))
+                    else:
+                        self.error = "Comment cannot be blank!!"
+                        self.render("editcomment.html", comment=self.comment,
+                                    user=self.user, error=self.error)
                 else:
-                    self.error = "Comment cannot be blank!!"
-                    self.render("editcomment.html", comment=self.comment,
-                                user=self.user, error=self.error)
+                    self.redirect('/home')
             else:
                 self.redirect('/home')
         else:
@@ -492,6 +512,7 @@ class CommentDeleteHandler(Handler):
         else:
             self.redirect('/login')
 
+
 class SignUpPageHandler(Handler):
     def render_sign_up_page(self, name="", username="", password="", verify="",
                             email="", error=""):
@@ -499,7 +520,10 @@ class SignUpPageHandler(Handler):
                     password=password, verify=verify, email=email, error=error)
 
     def get(self):
-        self.render_sign_up_page()
+        if self.user:
+            self.redirect('/home')
+        else:
+            self.render_sign_up_page()
 
     def post(self):
         self.name = self.request.get('name')
@@ -530,7 +554,7 @@ class SignUpPageHandler(Handler):
                                          email=self.email, error=self.error)
             elif self.password != self.verify:
                 self.error = "Passwords do not match !!"
-                self.render_sign_up_page(aame=self.name,
+                self.render_sign_up_page(name=self.name,
                                          username=self.username,
                                          email=self.email, error=self.error)
             elif not valid_email(self.email):
@@ -550,8 +574,6 @@ class SignUpPageHandler(Handler):
                                              error=self.error)
                 # If user doesn't exists already we put it in datastore
                 else:
-                    #password_hash = make_pwd_hash(self.username,
-                                                  #self.password)
                     user = User.user_register(name=self.name,
                                               username=self.username,
                                               password=self.password,
@@ -588,7 +610,7 @@ class LoginPageHandler(Handler):
                                        error=self.error)
             else:
                 valid_pwds = User.user_login(username=self.username,
-                                                 password=self.password)
+                                             password=self.password)
                 if valid_pwds:
                     self.set_cookie('user_id',
                                     str(self.user_exists.key().id()))
@@ -611,7 +633,7 @@ class HomePageHandler(Handler):
             self.user_posts = Post.get_post_by_username(self.user.username)
             if self.user_posts:
                 self.render_home_page(user=self.user,
-                                     posts=self.user_posts, error="")
+                                      posts=self.user_posts, error="")
             else:
                 self.render_home_page(user=self.user,
                                       posts=self.user_posts,

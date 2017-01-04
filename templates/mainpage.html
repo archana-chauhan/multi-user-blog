@@ -1,5 +1,17 @@
 {% extends "base.html" %}
 {% block content %}
+
+{% if error %}
+<div class="row">
+  <div class="col-md-12">
+    <div class="alert alert-danger" role="alert">
+      <h2>{{ error }}</h2>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+
 {% if posts %}
   {% for post in posts %}
   <div class="row">
