@@ -125,11 +125,11 @@ class User(db.Model):
         return User.get_by_id(user_id)
 
     @classmethod
-    def get_user_by_username(cls, username):
+    def get_user_by_username(cls, user_name):
         '''
             get_user_by_name : function return user instance by username
         '''
-        return db.GqlQuery("SELECT * FROM User WHERE username= :username", username=username).get()     # NOQA
+        return db.GqlQuery("SELECT * FROM User WHERE username= :username", username=user_name).get()     # NOQA
 
     @classmethod
     def user_register(cls, name, username, password, email):
@@ -183,8 +183,8 @@ class Post(db.Model):
     liked_by_users = db.ListProperty(str)
 
     @classmethod
-    def get_post_by_username(cls, username):
-        posts = db.GqlQuery("SELECT * FROM Post WHERE created_by_user = :username ORDER BY created_date_time DESC", username=username)  # NOQA
+    def get_post_by_username(cls, user_name):
+        posts = db.GqlQuery("SELECT * FROM Post WHERE created_by_user = :username ORDER BY created_date_time DESC", username=user_name)  # NOQA
         return posts
 
     @classmethod
@@ -193,8 +193,8 @@ class Post(db.Model):
         return posts
 
     @classmethod
-    def total_post_by_users(cls, username):
-        total_post = db.GqlQuery("SELECT * FROM Post WHERE created_by_user= :username", username=username).count()  # NOQA
+    def total_post_by_users(cls, user_name):
+        total_post = db.GqlQuery("SELECT * FROM Post WHERE created_by_user= :username", username=user_name).count()  # NOQA
         return total_post
 
     @classmethod
@@ -227,7 +227,7 @@ class Comment(db.Model):
 
     @classmethod
     def get_comments(cls, post_id):
-        comments = db.GqlQuery("SELECT * FROM Comment WHERE post_id= :post_id ORDER BY created_date_time ASC", post_id=int(post_id))   # NOQA
+        comments = db.GqlQuery("SELECT * FROM Comment WHERE post_id= :post_id ORDER BY created_date_time", post_id=int(post_id))   # NOQA
         return comments
 
 
@@ -673,28 +673,22 @@ class HomePageHandler(Handler):
     '''
         HomePageHandler : This handler handles user home page
     '''
-    def render_home_page(self, user=None, posts=None, error=""):
-        post_count = Post.total_post_by_users(user.username)
+    def render_main_page(self, user=None, posts=None):
+        post_count = Post.total_post_by_users(user.username)  # NOQA
         error = ""
         if post_count == 0 or post_count == -1:
-            error = "You have no post of your own !!"
-            self.render("home.html", user=user, posts=posts, error=error)
+            error = "No post found !!!"
+            self.render("home.html", posts=posts, user=user,
+                        error=error)
         else:
             all_posts = Post.get_post_by_username(user.username)
             self.render("home.html", posts=all_posts, user=user)
 
     def get(self):
         if self.user:
-            self.user_posts = Post.get_post_by_username(self.user.username)
-            if self.user_posts:
-                self.render_home_page(user=self.user,
-                                      posts=self.user_posts, error="")
-            else:
-                self.render_home_page(user=self.user,
-                                      posts=self.user_posts,
-                                      error="No post found !!")
+            self.render_main_page(user=self.user)
         else:
-            self.redirect('/login')
+            self.redirect('/')
 
 
 class LogoutHandler(Handler):

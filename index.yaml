@@ -19,4 +19,9 @@ indexes:
   properties:
   - name: created_by_user
   - name: created_date_time
+
+- kind: Post
+  properties:
+  - name: created_by_user
+  - name: created_date_time
     direction: desc
